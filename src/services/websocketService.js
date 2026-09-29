@@ -15,7 +15,8 @@ export function connect(
   onUserStatusChanged,
 ) {
   stompClient = new Client({
-    brokerURL: "ws://localhost:8080/ws",
+    // brokerURL: "ws://localhost:8080/ws",
+    brokerURL: `${import.meta.env.VITE_API_URL.replace(/^http/, "ws")}/ws`,
 
     debug: (str) => console.log(str),
 
@@ -68,8 +69,8 @@ export function connect(
         onMessageEdited(body);
       });
 
-      stompClient.subscribe("/topic/user-notifications", (message) => {        
-        const body = JSON.parse(message.body);        
+      stompClient.subscribe("/topic/user-notifications", (message) => {
+        const body = JSON.parse(message.body);
         if (onUserStatusChanged) onUserStatusChanged(body);
       });
     },
@@ -99,8 +100,8 @@ export function disconnect() {
 }
 
 export function sendMessage(receiverId, content, replyToId) {
-  if (!stompClient.connected) {
-    console.log("Aún no conectado");
+  if (!stompClient || !stompClient.connected) {
+    console.error("STOMP no conectado, mensaje no enviado");
     return;
   }
 
