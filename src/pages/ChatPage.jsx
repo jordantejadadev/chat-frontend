@@ -54,6 +54,11 @@ const ChatPage = () => {
   const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
+    if (selectedUser?.id) {
+      markAsRead(selectedUser.id).catch((err) =>
+        console.error("Error al marcar como leído: ", err),
+      );
+    }
     selectedUserRef.current = selectedUser;
   }, [selectedUser]);
 
@@ -69,6 +74,7 @@ const ChatPage = () => {
 
   useChatWebSocket({
     user,
+    selectedUserRef,
     selectedUser,
     setMessages,
     setUsers,
@@ -194,18 +200,18 @@ const ChatPage = () => {
               typingUser={typingUser}
             />
 
-            {/* Mensajes */}            
-              <MessageList
-                messages={messages}
-                search={search}
-                searchResults={searchResults}
-                messagesContainerRef={messagesContainerRef}
-                user={user}
-                editing={editing}
-                replying={replying}
-                actions={actions}
-                ui={ui}
-              />            
+            {/* Mensajes */}
+            <MessageList
+              messages={messages}
+              search={search}
+              searchResults={searchResults}
+              messagesContainerRef={messagesContainerRef}
+              user={user}
+              editing={editing}
+              replying={replying}
+              actions={actions}
+              ui={ui}
+            />
 
             {/* Input */}
             <MessageInput

@@ -1,31 +1,30 @@
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { connect, disconnect } from "../services/websocketService";
 import { markAsRead } from "../services/messageService";
 import toast from "react-hot-toast";
 
 export function useChatWebSocket({
   user,
-  selectedUser,
+  selectedUserRef,
   setMessages,
   setUsers,
   setTypingUser,
   loadUsers,
 }) {
   const handleMessageReceived = (message) => {
-    console.log("LLEGÓ MENSAJE");
-    console.log(message);
+    console.log("LLEGÓ MENSAJE", message);
 
     setMessages((previous) => {
       const exists = previous.some((m) => m.id === message.id);
-
       if (exists) return previous;
-
       return [...previous, message];
     });
 
-    // Si ya tenés esa conversación abierta, se marca como leído al toque
-    if (message.senderId === selectedUser?.id) {
-      markAsRead(message.senderId);
+    const activeUser = selectedUserRef?.current;
+    if (activeUser && message.senderId === activeUser.id) {
+      markAsRead(message.senderId).catch((err) =>
+        console.error("Error al marcar como leído:", err)
+      );
     }
   };
 
@@ -36,7 +35,7 @@ export function useChatWebSocket({
       previousUsers.map((u) => ({
         ...u,
         online: onlineUsers.includes(u.email),
-      })),
+      }))
     );
   };
 
@@ -45,37 +44,39 @@ export function useChatWebSocket({
 
     setMessages((previous) =>
       previous.map((message) =>
-        message.id === statusUpdate.messageId
+        message.id === statusUpdate.messageId || message.id === statusUpdate.id
           ? {
               ...message,
               status: statusUpdate.status,
             }
-          : message,
-      ),
+          : message
+      )
     );
   };
 
   const handleTypingReceived = (typingNotification) => {
-    if (typingNotification.sender === selectedUser?.email) {
+    const activeUser = selectedUserRef?.current;
+    if (activeUser && typingNotification.sender === activeUser.email) {
       setTypingUser(
-        typingNotification.typing ? typingNotification.sender : null,
+        typingNotification.typing ? typingNotification.sender : null
       );
     }
   };
 
   const handleUnreadUpdated = (unreadUpdate) => {
+    const activeUser = selectedUserRef?.current;
     setUsers((previousUsers) =>
       previousUsers.map((u) =>
         u.id === unreadUpdate.senderId
           ? {
               ...u,
               unreadCount:
-                unreadUpdate.senderId === selectedUser?.id
+                activeUser && unreadUpdate.senderId === activeUser.id
                   ? 0
                   : unreadUpdate.unreadCount,
             }
-          : u,
-      ),
+          : u
+      )
     );
   };
 
@@ -91,8 +92,8 @@ export function useChatWebSocket({
               ...message,
               deleted: true,
             }
-          : message,
-      ),
+          : message
+      )
     );
   };
 
@@ -105,13 +106,13 @@ export function useChatWebSocket({
               content: edited.content,
               edited: edited.edited,
             }
-          : message,
-      ),
+          : message
+      )
     );
   };
 
   const handleUserStatusChanged = (notification) => {
-    if (notification.email === user.email) return;
+    if (notification.email === user?.email) return;
 
     const icon = notification.type === "LOGOUT" ? "👋" : "🔔";
 
@@ -123,7 +124,7 @@ export function useChatWebSocket({
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.token) return;
 
     connect(
       user.token,
@@ -135,9 +136,9 @@ export function useChatWebSocket({
       handleUsersUpdated,
       handleMessageDeleted,
       handleMessageEdited,
-      handleUserStatusChanged,
+      handleUserStatusChanged
     );
 
     return () => disconnect();
-  }, [user, selectedUser, setMessages, setUsers, setTypingUser]);
+  }, [user?.token]);
 }
